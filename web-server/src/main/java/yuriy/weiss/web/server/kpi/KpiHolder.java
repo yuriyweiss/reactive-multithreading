@@ -1,9 +1,7 @@
 package yuriy.weiss.web.server.kpi;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import yuriy.weiss.web.server.registry.RequestsRegistry;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -11,13 +9,11 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 public class KpiHolder {
 
-    private final RequestsRegistry registry;
+    private final AtomicLong prevRequests = new AtomicLong( 0L );
+    private final AtomicLong currRequests = new AtomicLong( 0L );
 
-    private AtomicLong prevRequests = new AtomicLong( 0L );
-    private AtomicLong currRequests = new AtomicLong( 0L );
-
-    private AtomicLong prevProcessed = new AtomicLong( 0L );
-    private AtomicLong currProcessed = new AtomicLong( 0L );
+    private final AtomicLong prevProcessed = new AtomicLong( 0L );
+    private final AtomicLong currProcessed = new AtomicLong( 0L );
 
     private double requestsPerSecond = 0.0;
     private double processedPerSecond = 0.0;
@@ -25,11 +21,6 @@ public class KpiHolder {
     private long processedDelta;
 
     private long prevTime = System.currentTimeMillis();
-
-    @Autowired
-    public KpiHolder( RequestsRegistry registry ) {
-        this.registry = registry;
-    }
 
     public AtomicLong getCurrRequests() {
         return currRequests;
@@ -61,8 +52,8 @@ public class KpiHolder {
 
     private void printStatistics() {
         String message =
-                String.format( "requests: %5d; reqPerSec: %8.2f; processed: %5d; procPerSec: %8.2f; registrySize: %8d",
-                        requestsDelta, requestsPerSecond, processedDelta, processedPerSecond, registry.getSize() );
+                String.format( "requests: %5d; reqPerSec: %8.2f; processed: %5d; procPerSec: %8.2f",
+                        requestsDelta, requestsPerSecond, processedDelta, processedPerSecond );
         log.info( message );
     }
 }

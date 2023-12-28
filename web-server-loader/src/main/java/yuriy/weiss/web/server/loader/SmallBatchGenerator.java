@@ -13,7 +13,8 @@ import java.util.UUID;
 @Slf4j
 public class SmallBatchGenerator {
 
-    private static final int REQUESTS_COUNT = 100;
+    private static final int REQUESTS_COUNT = 10;
+    private static final boolean NEED_WAIT_FOR_RESPONSE = false;
 
     private final HttpCommandsSender commandsSender = new HttpCommandsSender();
 
@@ -32,26 +33,28 @@ public class SmallBatchGenerator {
             }
         }
         log.info( "generated: {}", requests.size() );
-        List<StartProcessingRequest> waiting = new ArrayList<>( requests );
-        while ( !waiting.isEmpty() ) {
-            List<StartProcessingRequest> processed = new ArrayList<>();
-            for ( int i = 0; i < waiting.size(); i++ ) {
-                StartProcessingRequest waitingRequest = waiting.get( i );
-                if ( commandsSender.isProcessed( waitingRequest ) ) {
-                    processed.add( waitingRequest );
+        if ( NEED_WAIT_FOR_RESPONSE ) {
+            List<StartProcessingRequest> waiting = new ArrayList<>( requests );
+            while ( !waiting.isEmpty() ) {
+                List<StartProcessingRequest> processed = new ArrayList<>();
+                for ( int i = 0; i < waiting.size(); i++ ) {
+                    StartProcessingRequest waitingRequest = waiting.get( i );
+                    if ( commandsSender.isProcessed( waitingRequest ) ) {
+                        processed.add( waitingRequest );
+                    }
+                    if ( i % 10 == 0 ) {
+                        ThreadUtils.sleep( 10L );
+                    }
                 }
+                waiting.removeAll( processed );
+                log.info( "processed: {}", processed.size() );
+            }
+            for ( int i = 0; i < requests.size(); i++ ) {
+                StartProcessingRequest request = requests.get( i );
+                commandsSender.sendGetProcessingResult( request.getRequestId() );
                 if ( i % 10 == 0 ) {
                     ThreadUtils.sleep( 10L );
                 }
-            }
-            waiting.removeAll( processed );
-            log.info( "processed: {}", processed.size() );
-        }
-        for ( int i = 0; i < requests.size(); i++ ) {
-            StartProcessingRequest request = requests.get( i );
-            commandsSender.sendGetProcessingResult( request.getRequestId() );
-            if ( i % 10 == 0 ) {
-                ThreadUtils.sleep( 10L );
             }
         }
         log.info( "generation finished" );

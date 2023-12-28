@@ -14,8 +14,15 @@ import java.util.UUID;
 public class ConstantStreamGenerator {
 
     private static final int GENERATE_BATCH_SIZE = 80;
+    private static final long GENERATION_DELAY = 1000L;
+
+    private final boolean waitForResponse;
 
     private final HttpCommandsSender commandsSender = new HttpCommandsSender();
+
+    public ConstantStreamGenerator( boolean waitForResponse ) {
+        this.waitForResponse = waitForResponse;
+    }
 
     public void generateConstantRequestsStream() throws IOException {
         log.info( "start generation" );
@@ -34,35 +41,37 @@ public class ConstantStreamGenerator {
                 }
             }
             log.info( "generated: {}", newRequests.size() );
-            oldRequests.addAll( newRequests );
 
-            List<StartProcessingRequest> processedRequests = new ArrayList<>();
-            for ( int i = 0; i < oldRequests.size(); i++ ) {
-                StartProcessingRequest oldRequest = oldRequests.get( i );
-                if ( commandsSender.isProcessed( oldRequest ) ) {
-                    processedRequests.add( oldRequest );
-                }
+            if (waitForResponse) {
+                oldRequests.addAll( newRequests );
+                List<StartProcessingRequest> processedRequests = new ArrayList<>();
+                for ( int i = 0; i < oldRequests.size(); i++ ) {
+                    StartProcessingRequest oldRequest = oldRequests.get( i );
+                    if ( commandsSender.isProcessed( oldRequest ) ) {
+                        processedRequests.add( oldRequest );
+                    }
                 /*
                 if ( i % 30 == 0 ) {
                     ThreadUtils.sleep( 5L );
                 }
                  */
-            }
-            log.info( "processed: {}", processedRequests.size() );
-            oldRequests.removeAll( processedRequests );
-            log.info( "waiting processing: {}", oldRequests.size() );
+                }
+                log.info( "processed: {}", processedRequests.size() );
+                oldRequests.removeAll( processedRequests );
+                log.info( "waiting processing: {}", oldRequests.size() );
 
-            for ( int i = 0; i < processedRequests.size(); i++ ) {
-                StartProcessingRequest processedRequest = processedRequests.get( i );
-                commandsSender.sendGetProcessingResult( processedRequest.getRequestId() );
+                for ( int i = 0; i < processedRequests.size(); i++ ) {
+                    StartProcessingRequest processedRequest = processedRequests.get( i );
+                    commandsSender.sendGetProcessingResult( processedRequest.getRequestId() );
                 /*
                 if ( i % 30 == 0 ) {
                     ThreadUtils.sleep( 5L );
                 }
                  */
+                }
             }
 
-            ThreadUtils.sleep( 100L );
+            ThreadUtils.sleep( GENERATION_DELAY );
         }
     }
 }

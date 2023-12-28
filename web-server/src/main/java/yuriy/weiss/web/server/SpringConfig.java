@@ -18,11 +18,18 @@ import java.util.Map;
 @Configuration
 public class SpringConfig {
 
+    @Value( "${storage.mysql.connection.url}" )
+    private String connectionUrl;
+    @Value( "${storage.mysql.connection.username}" )
+    private String username;
+    @Value( "${storage.mysql.connection.password}" )
+    private String password;
+
+    @Value( "${spring.kafka.bootstrap.servers}" )
+    private String bootstrapAddress;
+
     @Bean( "mysqlDataSource" )
-    public DataSource mysqlDataSource(
-            @Value( "${storage.mysql.connection.url}" ) String connectionUrl,
-            @Value( "${storage.mysql.connection.username}" ) String username,
-            @Value( "${storage.mysql.connection.password}" ) String password ) {
+    public DataSource mysqlDataSource() {
         DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
         dataSourceBuilder.driverClassName( "org.mariadb.jdbc.Driver" );
         dataSourceBuilder.url( connectionUrl );
@@ -37,8 +44,7 @@ public class SpringConfig {
     }
 
     @Bean
-    public ProducerFactory<String, String> producerFactory(
-            @Value( "spring.kafka.bootstrap.servers" ) String bootstrapAddress ) {
+    public ProducerFactory<String, String> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put( ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress );
         configProps.put( ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class );

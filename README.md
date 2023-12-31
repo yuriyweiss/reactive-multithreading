@@ -20,7 +20,6 @@ Planned training:
 
 ## create Kafka topics
 1. > bin/windows/kafka-topics.bat --create --topic REACT-REQUEST --bootstrap-server <my kafka server> --config retention.ms=86400000 --partitions 3
-2. > bin/windows/kafka-topics.bat --create --topic REACT-RESPONSE --bootstrap-server <my kafka server> --config retention.ms=86400000 --partitions 3
 
 # MariaDB
 ## start server

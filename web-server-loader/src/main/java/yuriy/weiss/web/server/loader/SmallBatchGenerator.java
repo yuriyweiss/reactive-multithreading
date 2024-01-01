@@ -13,7 +13,7 @@ import java.util.UUID;
 @Slf4j
 public class SmallBatchGenerator {
 
-    private static final int REQUESTS_COUNT = 10;
+    private static final int REQUESTS_COUNT = 100;
     private static final boolean NEED_WAIT_FOR_RESPONSE = false;
 
     private final HttpCommandsSender commandsSender = new HttpCommandsSender();

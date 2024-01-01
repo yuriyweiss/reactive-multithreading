@@ -1,4 +1,4 @@
-package yuriy.weiss.web.server.kpi;
+package yuriy.weiss.common.kpi;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -8,6 +8,8 @@ import java.util.concurrent.atomic.AtomicLong;
 @Component
 @Slf4j
 public class KpiHolder {
+
+    private static final int BYTES_IN_MB = 1024 * 1024;
 
     private final AtomicLong prevRequests = new AtomicLong( 0L );
     private final AtomicLong currRequests = new AtomicLong( 0L );
@@ -51,9 +53,20 @@ public class KpiHolder {
     }
 
     private void printStatistics() {
-        String message =
+        String throughput =
                 String.format( "requests: %5d; reqPerSec: %8.2f; processed: %5d; procPerSec: %8.2f",
                         requestsDelta, requestsPerSecond, processedDelta, processedPerSecond );
-        log.info( message );
+        log.info( throughput );
+        log.info( memoryStats() );
+    }
+
+    private String memoryStats() {
+        // get Runtime instance
+        Runtime instance = Runtime.getRuntime();
+        String result = "Total Memory: " + instance.totalMemory() / BYTES_IN_MB + "; ";
+        result += "Free Memory: " + instance.freeMemory() / BYTES_IN_MB + "; ";
+        result += "Used Memory: " + ( instance.totalMemory() - instance.freeMemory() ) / BYTES_IN_MB + "; ";
+        result += "Max Memory: " + instance.maxMemory() / BYTES_IN_MB;
+        return result;
     }
 }

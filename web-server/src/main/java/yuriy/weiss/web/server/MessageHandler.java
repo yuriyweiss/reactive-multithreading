@@ -12,7 +12,9 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 import yuriy.weiss.common.model.*;
-import yuriy.weiss.web.server.kpi.KpiHolder;
+import yuriy.weiss.common.kpi.KpiHolder;
+
+import java.time.LocalDateTime;
 
 @Component
 @Slf4j
@@ -58,9 +60,10 @@ public class MessageHandler {
 
     private void saveRequestToDb( StartProcessingRequest request ) {
         mysqlJdbcTemplate.update(
-                "insert into request_data(rquid, status, create_date, message) " +
+                "insert into request_data(rquid, status, create_date, request_date, message) " +
                         "values(?, ?, ?, ?)",
-                request.getRequestId(), "CREATED", request.getRequestDateTime(), request.getMessage() );
+                request.getRequestId(), "CREATED", LocalDateTime.now(),
+                request.getRequestDateTime(), request.getMessage() );
     }
 
     private boolean sendRequestToKafka( StartProcessingRequest request ) {

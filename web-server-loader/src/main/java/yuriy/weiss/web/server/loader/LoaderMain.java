@@ -8,8 +8,8 @@ public class LoaderMain {
 
     public static void main( String[] args ) {
         try {
-            new SmallBatchGenerator().sendRequestsWaitThenConsumeResults();
-//            new ConstantStreamGenerator( false ).generateConstantRequestsStream();
+//            new SmallBatchGenerator().sendRequestsWaitThenConsumeResults();
+            new ConstantStreamGenerator( false ).generateConstantRequestsStream();
         } catch ( Exception e ) {
             log.error( "Непредвиденная ошибка.", e );
         }

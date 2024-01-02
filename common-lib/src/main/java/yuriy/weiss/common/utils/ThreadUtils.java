@@ -1,11 +1,11 @@
 package yuriy.weiss.common.utils;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Random;
-
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Реализация метода sleep с периодическим логированием времени просыпания.
@@ -40,11 +40,11 @@ public class ThreadUtils {
         }
     }
 
-    public static long nextGaussian( int average ) {
-        int result;
+    public static long nextGaussian( long average ) {
+        long result;
         do {
             double val = random.nextGaussian() * ( average / 5.0 ) + average;
-            result = ( int ) Math.round( val );
+            result = Math.round( val );
         } while ( result <= 0 );
         return result;
     }

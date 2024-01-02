@@ -19,7 +19,7 @@ Planned training:
 3. > bin/windows/kafka-server-start.bat config/server.properties
 
 ## create Kafka topics
-1. > bin/windows/kafka-topics.bat --create --topic REACT-REQUEST --bootstrap-server <my kafka server> --config retention.ms=86400000 --partitions 3
+1. > bin/windows/kafka-topics.bat --create --topic REACT-REQUEST --bootstrap-server <my kafka server> --config retention.ms=86400000 --partitions 10
 
 # MariaDB
 ## start server
@@ -44,5 +44,15 @@ CREATE TABLE `request_data` (
 PRIMARY KEY (`rquid`) USING BTREE
 )
 COLLATE='utf8_general_ci'
-ENGINE=InnoDB
-;
+ENGINE=InnoDB;
+
+# Processing service
+Assuming that:
+* Kafka topic has 10 partitions;
+* One instance of Processing service application listens to one partition;
+* Id of partition is set as java argument on start;
+* Two instances of Processing service application can listen to one partition;
+* One request is processed for 2 seconds.
+
+We must reach processing service throughput = 300 tps, so we need 30 tps for 1 partition.
+To reach 30 tps we need 60 concurrent threads, each waiting for 2 seconds lasting task.

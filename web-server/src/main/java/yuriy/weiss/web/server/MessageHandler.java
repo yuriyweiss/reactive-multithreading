@@ -11,10 +11,8 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
-import yuriy.weiss.common.model.*;
 import yuriy.weiss.common.kpi.KpiHolder;
-
-import java.time.LocalDateTime;
+import yuriy.weiss.common.model.*;
 
 @Component
 @Slf4j
@@ -41,47 +39,31 @@ public class MessageHandler {
         log.trace( "startProcessing" );
         return request
                 .bodyToMono( StartProcessingRequest.class )
-                .map( this::registerProcessingRequest )
+                .map( this::putRequestToKafka )
                 .then( ServerResponse.ok()
                         .contentType( MediaType.APPLICATION_JSON )
                         .body( BodyInserters.fromValue( new StartProcessingResponse( "success" ) ) ) );
     }
 
-    private Mono<Void> registerProcessingRequest( final StartProcessingRequest request ) {
+    private Mono<Void> putRequestToKafka( final StartProcessingRequest request ) {
         log.trace( "RECEIVED: {}", request.getRequestId() );
         kpiHolder.getCurrRequests().getAndIncrement();
-        saveRequestToDb( request );
         if ( sendRequestToKafka( request ) ) {
-            updateDbStatus( request.getRequestId(), "SENT" );
+            log.trace( "SENT: {}", request.getRequestId() );
+        } else {
+            log.trace( "ERROR: {}", request.getRequestId() );
         }
-        log.trace( "SENT: {}", request.getRequestId() );
         return Mono.empty();
     }
 
-    private void saveRequestToDb( StartProcessingRequest request ) {
-        mysqlJdbcTemplate.update(
-                "insert into request_data(rquid, status, create_date, request_date, message) " +
-                        "values(?, ?, ?, ?)",
-                request.getRequestId(), "CREATED", LocalDateTime.now(),
-                request.getRequestDateTime(), request.getMessage() );
-    }
-
     private boolean sendRequestToKafka( StartProcessingRequest request ) {
-        boolean result = true;
         try {
             kafkaTemplate.send( "REACT-REQUEST", objectMapper.writeValueAsString( request ) );
+            return true;
         } catch ( Exception e ) {
             log.error( "sendRequestToKafka failed", e );
-            updateDbStatus( request.getRequestId(), "ERROR" );
-            result = false;
+            return false;
         }
-        return result;
-    }
-
-    private void updateDbStatus( String requestId, String status ) {
-        mysqlJdbcTemplate.update(
-                "update request_data set status = ? where rquid = ?",
-                status, requestId );
     }
 
     public Mono<ServerResponse> isProcessed( final ServerRequest request ) {

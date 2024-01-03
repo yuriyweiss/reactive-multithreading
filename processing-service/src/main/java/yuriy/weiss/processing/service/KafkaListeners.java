@@ -1,10 +1,15 @@
 package yuriy.weiss.processing.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import yuriy.weiss.common.kpi.KpiHolder;
 import yuriy.weiss.common.model.StartProcessingRequest;
@@ -20,14 +25,19 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class KafkaListeners {
 
     private static final long AVERAGE_LONG_TASK_SLEEP = 1000L;
-    private static final int UPPER_QUEUE_BOUNDARY = 50;
     private static final long WAIT_UNTIL_QUEUE_DRAINED = 200L;
 
     private final JdbcTemplate mysqlJdbcTemplate;
     private final ObjectMapper objectMapper;
     private final KpiHolder kpiHolder;
 
-    private final ExecutorService executorService = Executors.newFixedThreadPool( 20 );
+    @Value( "${spring.kafka.topic.partitions.count}" )
+    private int partitionsCount;
+    @Value( "${message.processor.threads.in.pool}" )
+    private int threadsInPool;
+    private int upperQueueBoundary;
+
+    private ExecutorService[] executorServices;
 
     @Autowired
     public KafkaListeners(
@@ -39,18 +49,34 @@ public class KafkaListeners {
         this.kpiHolder = kpiHolder;
     }
 
+    @PostConstruct
+    private void setup() {
+        System.out.println( "partitions count: " + partitionsCount );
+        System.out.println( "threads in pool: " + threadsInPool );
+        this.executorServices = new ExecutorService[partitionsCount];
+        for ( int i = 0; i < partitionsCount; i++ ) {
+            executorServices[i] = Executors.newFixedThreadPool( threadsInPool );
+        }
+        this.upperQueueBoundary = ( int ) Math.round( threadsInPool * 1.5 );
+    }
+
     @KafkaListener( topics = "REACT-REQUEST",
-            containerFactory = "kafkaListenerContainerFactory",
-            concurrency = "10" )
-    public void listenForRequests( final String message ) {
+            concurrency = "${spring.kafka.topic.partitions.count}",
+            containerFactory = "kafkaListenerContainerFactory" )
+    public void requestsListener( @Payload final String message,
+            @Header( KafkaHeaders.RECEIVED_PARTITION ) int partition ) {
+        loadMessageFromPartition( message, partition );
+    }
+
+    private void loadMessageFromPartition( String message, int partition ) {
         log.trace( "GOT message: {}", message );
         kpiHolder.getCurrRequests().getAndIncrement();
         try {
             final StartProcessingRequest request = objectMapper.readValue( message, StartProcessingRequest.class );
-            while ( ( ( ThreadPoolExecutor ) executorService ).getQueue().size() > UPPER_QUEUE_BOUNDARY ) {
+            while ( getQueueSize( executorServices[partition] ) > upperQueueBoundary ) {
                 ThreadUtils.sleep( WAIT_UNTIL_QUEUE_DRAINED );
             }
-            executorService.submit( () -> processRequest( request ) );
+            executorServices[partition].submit( () -> processRequest( request ) );
             log.trace( "SUBMITTED: {}", request.getRequestId() );
         } catch ( Exception e ) {
             log.error( "ERROR request parsing and putting to queue [{}]", message );
@@ -98,7 +124,15 @@ public class KafkaListeners {
                 LocalDateTime.now(), response, request.getRequestId() );
     }
 
-    public void logQueueSize() {
-        log.info("QUEUE size: {}", ( ( ThreadPoolExecutor ) executorService ).getQueue().size());
+    public void logQueueSizes() {
+        StringBuilder sizes = new StringBuilder();
+        for ( ExecutorService executorService : executorServices ) {
+            sizes.append( " " ).append( getQueueSize( executorService ) );
+        }
+        log.info( "QUEUE sizes:{}", sizes );
+    }
+
+    private int getQueueSize( ExecutorService executorService ) {
+        return ( ( ThreadPoolExecutor ) executorService ).getQueue().size();
     }
 }

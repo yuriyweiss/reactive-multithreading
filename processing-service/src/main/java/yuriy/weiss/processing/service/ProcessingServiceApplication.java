@@ -25,7 +25,7 @@ public class ProcessingServiceApplication {
         ScheduledExecutorService updateKpiService = Executors.newSingleThreadScheduledExecutor();
         updateKpiService.scheduleAtFixedRate( () -> {
             kpiHolder.updateCountersAndPrintStats();
-            kafkaListeners.logQueueSize();
+            kafkaListeners.logQueueSizes();
         }, 5L, 5L, TimeUnit.SECONDS );
     }
 }

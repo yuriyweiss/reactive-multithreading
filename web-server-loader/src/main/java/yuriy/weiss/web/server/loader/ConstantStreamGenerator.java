@@ -13,8 +13,8 @@ import java.util.UUID;
 @Slf4j
 public class ConstantStreamGenerator {
 
-    private static final int GENERATE_BATCH_SIZE = 80;
-    private static final long GENERATION_DELAY = 500L;
+    private static final int GENERATE_BATCH_SIZE = 120;
+    private static final long GENERATION_DELAY = 250L;
 
     private final boolean waitForResponse;
 
@@ -37,7 +37,7 @@ public class ConstantStreamGenerator {
                 newRequests.add( request );
                 commandsSender.sendStartProcessingRequest( request );
                 if ( i % 10 == 0 ) {
-                    ThreadUtils.sleep( 10L );
+                    ThreadUtils.sleep( 5L );
                 }
             }
             log.info( "generated: {}", newRequests.size() );
